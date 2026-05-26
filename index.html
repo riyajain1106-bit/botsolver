@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Botsolver</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #212121;
+      color: #ececec;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #2f2f2f;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header span.dot {
+      width: 10px; height: 10px;
+      background: #10a37f;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      scroll-behavior: smooth;
+    }
+
+    #chat::-webkit-scrollbar { width: 6px; }
+    #chat::-webkit-scrollbar-track { background: transparent; }
+    #chat::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+    .message-row {
+      display: flex;
+      padding: 12px 24px;
+      gap: 16px;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .message-row.user { justify-content: flex-end; }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .avatar.bot { background: #10a37f; color: #fff; }
+    .avatar.user { background: #5b6af5; color: #fff; }
+
+    .bubble {
+      max-width: 75%;
+      padding: 12px 16px;
+      border-radius: 18px;
+      line-height: 1.6;
+      font-size: 15px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message-row.user .bubble {
+      background: #2f2f2f;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-row.bot .bubble {
+      background: transparent;
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    .typing-indicator {
+      display: flex; gap: 5px; align-items: center;
+      padding: 14px 0;
+    }
+
+    .typing-indicator span {
+      width: 8px; height: 8px;
+      background: #888;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    #empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #666;
+      text-align: center;
+      padding: 24px;
+    }
+
+    #empty-state h2 { font-size: 28px; color: #ececec; font-weight: 600; }
+    #empty-state p { font-size: 15px; }
+
+    #input-area {
+      padding: 16px 24px 24px;
+      display: flex;
+      justify-content: center;
+    }
+
+    #input-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      width: 100%;
+      max-width: 860px;
+      background: #2f2f2f;
+      border: 1px solid #3f3f3f;
+      border-radius: 16px;
+      padding: 12px 14px;
+      transition: border-color 0.2s;
+    }
+
+    #input-wrap:focus-within { border-color: #10a37f; }
+
+    #user-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ececec;
+      font-size: 15px;
+      resize: none;
+      max-height: 160px;
+      line-height: 1.5;
+      font-family: inherit;
+    }
+
+    #user-input::placeholder { color: #666; }
+
+    #send-btn {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      border: none;
+      background: #10a37f;
+      color: #fff;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    #send-btn:disabled { background: #3f3f3f; cursor: default; }
+    #send-btn:not(:disabled):hover { background: #0d8f6f; }
+
+    #send-btn svg { width: 18px; height: 18px; }
+
+    #hint {
+      text-align: center;
+      font-size: 12px;
+      color: #555;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span class="dot"></span>
+    Botsolver
+  </header>
+
+  <div id="chat">
+    <div id="empty-state">
+      <h2>How can I help you today?</h2>
+      <p>Ask me anything — I'm here to solve your problems.</p>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <div>
+      <div id="input-wrap">
+        <textarea
+          id="user-input"
+          rows="1"
+          placeholder="Message Botsolver..."
+          autofocus
+        ></textarea>
+        <button id="send-btn" disabled title="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5"/>
+            <polyline points="5 12 12 5 19 12"/>
+          </svg>
+        </button>
+      </div>
+      <p id="hint">Press Enter to send &nbsp;·&nbsp; Shift+Enter for new line</p>
+    </div>
+  </div>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+    const emptyState = document.getElementById("empty-state");
+
+    input.addEventListener("input", () => {
+      input.style.height = "auto";
+      input.style.height = input.scrollHeight + "px";
+      sendBtn.disabled = !input.value.trim();
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (!sendBtn.disabled) sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener("click", sendMessage);
+
+    function addMessage(role, text) {
+      if (emptyState) emptyState.remove();
+
+      const row = document.createElement("div");
+      row.className = `message-row ${role}`;
+
+      const avatar = document.createElement("div");
+      avatar.className = `avatar ${role}`;
+      avatar.textContent = role === "user" ? "U" : "B";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
+
+      if (role === "user") {
+        row.appendChild(bubble);
+        row.appendChild(avatar);
+      } else {
+        row.appendChild(avatar);
+        row.appendChild(bubble);
+      }
+
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+      return bubble;
+    }
+
+    function addTyping() {
+      const row = document.createElement("div");
+      row.className = "message-row bot";
+      row.id = "typing-row";
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar bot";
+      avatar.textContent = "B";
+
+      const indicator = document.createElement("div");
+      indicator.className = "typing-indicator";
+      indicator.innerHTML = "<span></span><span></span><span></span>";
+
+      row.appendChild(avatar);
+      row.appendChild(indicator);
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function removeTyping() {
+      document.getElementById("typing-row")?.remove();
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+
+      addMessage("user", text);
+      input.value = "";
+      input.style.height = "auto";
+      sendBtn.disabled = true;
+      addTyping();
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+
+        const data = await res.json();
+        removeTyping();
+
+        if (!res.ok) {
+          addMessage("bot", "Error: " + (data.error || "Something went wrong."));
+        } else {
+          addMessage("bot", data.reply);
+        }
+      } catch (err) {
+        removeTyping();
+        addMessage("bot", "Network error. Please try again.");
+      }
+    }
+  </script>
+
+</body>
+</html>

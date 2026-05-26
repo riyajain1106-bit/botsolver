@@ -1,0 +1,8 @@
+{
+  "name": "botsolver",
+  "version": "1.0.0",
+  "description": "A ChatGPT-like AI chat app powered by Groq",
+  "scripts": {
+    "dev": "node server.js"
+  }
+}
